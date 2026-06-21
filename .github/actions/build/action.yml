@@ -62,17 +62,11 @@ runs:
       run: mvn -B jar:jar surefire:test
       shell: bash
 
-    - name: Deploy
-      if: ${{ github.event_name != 'pull_request' }}
-      env:
-        MAVEN_USERNAME: ${{ inputs.maven-username }}
-        MAVEN_TOKEN: ${{ inputs.maven-password }}
-      run: |
-        if [ "${{ inputs.platform-name }}" == "linux_arm" ]; then
-          mvn deploy -DskipTests -Plinux-aarch32
-        elif [ "${{ inputs.platform-name }}" == "linux_arm64" ]; then
-          mvn deploy -DskipTests -Plinux-aarch64
-        else
-          mvn deploy -DskipTests
-        fi
-      shell: bash
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.platform-name }}
+        path: |
+          **/target/*.jar
+          **/target/*.so
+        if-no-files-found: warn
