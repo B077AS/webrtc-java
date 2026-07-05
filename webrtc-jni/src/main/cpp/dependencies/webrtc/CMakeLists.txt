@@ -179,8 +179,12 @@ elseif(LINUX)
     pkg_check_modules(GIO REQUIRED gio-2.0 gio-unix-2.0)
     pkg_check_modules(GBM REQUIRED gbm)
     pkg_check_modules(DRM REQUIRED libdrm)
-
-    target_include_directories(${PROJECT_NAME} PUBLIC ${DBUS_INCLUDE_DIRS})
+    # GIO include dirs: with WEBRTC_USE_PIPEWIRE defined, desktop_capturer.h ->
+    # desktop_capture_metadata.h -> xdg_session_details.h includes <gio/gio.h>,
+    # so the JNI wrapper compile needs the glib headers too. (No pipewire headers
+    # are needed — nothing the JNI includes reaches them, and the runner has no
+    # libpipewire dev package.)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${DBUS_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
 	target_compile_definitions(${PROJECT_NAME} PUBLIC WEBRTC_LINUX WEBRTC_POSIX WEBRTC_USE_H264 WEBRTC_USE_X11 WEBRTC_USE_PIPEWIRE WEBRTC_USE_GIO)
 	target_link_libraries(${PROJECT_NAME} X11 Xext Xfixes Xdamage Xtst Xrandr Xcomposite dbus-1 ${GIO_LIBRARIES} ${GBM_LIBRARIES} ${DRM_LIBRARIES})
 elseif(WIN32)
@@ -290,6 +294,18 @@ elseif(LINUX)
     elseif(${TARGET_CPU} STREQUAL "arm64")
         set(COMPILE_ARGS "${COMPILE_ARGS} custom_toolchain=\"//build/toolchain/linux:clang_arm64\"")
     endif()
+endif()
+
+if(LINUX)
+    # The sysroot pkg-config environment exported for the JNI configure step
+    # (PKG_CONFIG_SYSROOT_DIR/PKG_CONFIG_PATH in cpp/CMakeLists.txt) must not
+    # leak into gn/ninja: Chromium's pkg-config wrapper applies the gn sysroot
+    # itself, so a leaked PKG_CONFIG_SYSROOT_DIR double-prefixes every include
+    # path (build/linux/<sysroot>/opt/sysroot/<sysroot>/usr/include/...) and
+    # the gio/pipewire headers of the portal capturer are not found. All
+    # pkg_check_modules() calls above have already run at this point.
+    unset(ENV{PKG_CONFIG_SYSROOT_DIR})
+    unset(ENV{PKG_CONFIG_PATH})
 endif()
 
 execute_command(
