@@ -16,7 +16,10 @@ on:
   workflow_dispatch:
 
 env:
-  WEBRTC_CACHE_BRANCH: 7204
+  # "-pipewire" suffix busts the pre-PipeWire compiled-WebRTC cache; a stale
+  # libwebrtc.a built with rtc_use_pipewire=false would skip the gn rebuild and
+  # ABI-mismatch the JNI layer (which now defines WEBRTC_USE_PIPEWIRE).
+  WEBRTC_CACHE_BRANCH: 7204-pipewire
   WEBRTC_CHECKOUT_FOLDER: webrtc
   WEBRTC_INSTALL_FOLDER: webrtc/build
 
