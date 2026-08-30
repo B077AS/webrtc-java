@@ -80,3 +80,18 @@ runs:
           mvn deploy -DskipTests
         fi
       shell: bash
+
+    # Forks have no Maven Central credentials — the Deploy step above is skipped
+    # there, so upload the built jars and native libraries as a run artifact
+    # instead (used to test experimental branches without a release).
+    - name: Upload artifact
+      if: ${{ github.repository != 'devopvoid/webrtc-java' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.platform-name }}
+        path: |
+          **/target/*.jar
+          **/target/*.so
+          **/target/*.dll
+          **/target/*.dylib
+        if-no-files-found: warn
